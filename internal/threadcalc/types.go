@@ -21,6 +21,22 @@ type CodeCorrection struct {
 	To   string `json:"to"`
 }
 
+// TransformationSettings stores user-configurable report parsing rules.
+type TransformationSettings struct {
+	Rules []DescriptionTransformRule `json:"rules"`
+}
+
+// DescriptionTransformRule changes a code when the Description column matches.
+type DescriptionTransformRule struct {
+	Enabled         bool   `json:"enabled"`
+	MatchColumn     string `json:"matchColumn"`
+	MatchMode       string `json:"matchMode"`
+	Description     string `json:"description"`
+	StripCodePrefix string `json:"stripCodePrefix"`
+	CodePrefix      string `json:"codePrefix"`
+	CodeSuffix      string `json:"codeSuffix"`
+}
+
 // ThreadResult is one aggregated DMC row in the final calculation.
 type ThreadResult struct {
 	Code         string   `json:"code"`

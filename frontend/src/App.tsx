@@ -1,7 +1,18 @@
 import {useMemo, useState} from 'react';
 import './App.css';
-import {ImportThreadFile, RecalculateThreadCodes} from '../wailsjs/go/main/App';
-import {threadcalc} from '../wailsjs/go/models';
+import {
+    DeleteUserPaletteEntry,
+    GetPalette,
+    GetTransformationSettings,
+    GetTransformationSettingsPath,
+    GetUserPalettePath,
+    ImportThreadFile,
+    ImportThreadFilePath,
+    RecalculateThreadCodes,
+    SaveTransformationSettings,
+    SaveUserPaletteEntry,
+} from '../wailsjs/go/main/App';
+import {dmc, threadcalc} from '../wailsjs/go/models';
 
 type ThreadResult = {
     code: string;
@@ -32,6 +43,33 @@ type CodeCorrection = {
     to: string;
 };
 
+type PaletteEntry = {
+    code: string;
+    name: string;
+    hex: string;
+    source?: string;
+};
+
+type PaletteDraft = {
+    code: string;
+    name: string;
+    hex: string;
+};
+
+type DescriptionTransformRule = {
+    enabled: boolean;
+    matchColumn: string;
+    matchMode: string;
+    description: string;
+    stripCodePrefix: string;
+    codePrefix: string;
+    codeSuffix: string;
+};
+
+type TransformationSettings = {
+    rules: DescriptionTransformRule[] | null;
+};
+
 type SummaryLanguage = 'ru' | 'eng';
 
 const metersFormatter = new Intl.NumberFormat('ru-RU', {
@@ -60,6 +98,18 @@ function App() {
     const [codeDrafts, setCodeDrafts] = useState<Record<string, string>>({});
     const [summaryLanguage, setSummaryLanguage] = useState<SummaryLanguage | null>(null);
     const [copyStatus, setCopyStatus] = useState('');
+    const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+    const [palette, setPalette] = useState<PaletteEntry[]>([]);
+    const [paletteSearch, setPaletteSearch] = useState('');
+    const [palettePath, setPalettePath] = useState('');
+    const [paletteDraft, setPaletteDraft] = useState<PaletteDraft>({code: '', name: '', hex: '#000000'});
+    const [isPaletteLoading, setIsPaletteLoading] = useState(false);
+    const [paletteMessage, setPaletteMessage] = useState('');
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [settings, setSettings] = useState<TransformationSettings>({rules: []});
+    const [settingsPath, setSettingsPath] = useState('');
+    const [isSettingsLoading, setIsSettingsLoading] = useState(false);
+    const [settingsMessage, setSettingsMessage] = useState('');
     const items = result?.items ?? [];
     const warnings = result?.warnings ?? [];
 
@@ -73,6 +123,18 @@ function App() {
         }
         return formatSummary(items, summaryLanguage);
     }, [items, summaryLanguage]);
+
+    const filteredPalette = useMemo(() => {
+        const query = paletteSearch.trim().toLowerCase();
+        if (!query) {
+            return palette;
+        }
+        return palette.filter((color) => {
+            return color.code.toLowerCase().includes(query) ||
+                color.name.toLowerCase().includes(query) ||
+                color.hex.toLowerCase().includes(query);
+        });
+    }, [palette, paletteSearch]);
 
     async function importFile() {
         setIsLoading(true);
@@ -148,6 +210,151 @@ function App() {
         }
     }
 
+    async function openPalette() {
+        setIsPaletteOpen(true);
+        setPaletteMessage('');
+        if (palette.length || isPaletteLoading) {
+            return;
+        }
+
+        await loadPalette();
+    }
+
+    async function loadPalette() {
+        setIsPaletteLoading(true);
+        setError('');
+        try {
+            const [colors, path] = await Promise.all([
+                GetPalette() as Promise<PaletteEntry[]>,
+                GetUserPalettePath(),
+            ]);
+            setPalette(colors ?? []);
+            setPalettePath(path);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : String(err));
+        } finally {
+            setIsPaletteLoading(false);
+        }
+    }
+
+    function editPaletteEntry(color: PaletteEntry) {
+        setPaletteDraft({
+            code: color.code,
+            name: color.name,
+            hex: color.hex,
+        });
+        setPaletteMessage(color.source === 'user' ? 'Редактирование пользовательского цвета' : 'Будет создано пользовательское перекрытие');
+    }
+
+    function clearPaletteDraft() {
+        setPaletteDraft({code: '', name: '', hex: '#000000'});
+        setPaletteMessage('');
+    }
+
+    async function savePaletteEntry() {
+        setIsPaletteLoading(true);
+        setError('');
+        try {
+            await SaveUserPaletteEntry(paletteDraft as dmc.PaletteEntry);
+            await loadPalette();
+            setPaletteMessage('Пользовательская палитра сохранена');
+            if (result) {
+                await recalculate([], skeinLength);
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : String(err));
+        } finally {
+            setIsPaletteLoading(false);
+        }
+    }
+
+    async function deletePaletteEntry(code: string) {
+        setIsPaletteLoading(true);
+        setError('');
+        try {
+            await DeleteUserPaletteEntry(code);
+            await loadPalette();
+            clearPaletteDraft();
+            setPaletteMessage('Пользовательский цвет удален');
+            if (result) {
+                await recalculate([], skeinLength);
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : String(err));
+        } finally {
+            setIsPaletteLoading(false);
+        }
+    }
+
+    async function openSettings() {
+        setIsSettingsOpen(true);
+        setSettingsMessage('');
+        if ((settings.rules ?? []).length || isSettingsLoading) {
+            return;
+        }
+
+        await loadSettings();
+    }
+
+    async function loadSettings() {
+        setIsSettingsLoading(true);
+        setError('');
+        try {
+            const [loadedSettings, path] = await Promise.all([
+                GetTransformationSettings() as Promise<TransformationSettings>,
+                GetTransformationSettingsPath(),
+            ]);
+            setSettings({rules: loadedSettings.rules ?? []});
+            setSettingsPath(path);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : String(err));
+        } finally {
+            setIsSettingsLoading(false);
+        }
+    }
+
+    function addTransformRule() {
+        setSettings((current) => ({
+            rules: [
+                ...(current.rules ?? []),
+                {enabled: true, matchColumn: 'description', matchMode: 'equals', description: '', stripCodePrefix: '', codePrefix: '', codeSuffix: ''},
+            ],
+        }));
+    }
+
+    function updateTransformRule(index: number, patch: Partial<DescriptionTransformRule>) {
+        setSettings((current) => ({
+            rules: (current.rules ?? []).map((rule, ruleIndex) => (
+                ruleIndex === index ? {...rule, ...patch} : rule
+            )),
+        }));
+    }
+
+    function deleteTransformRule(index: number) {
+        setSettings((current) => ({
+            rules: (current.rules ?? []).filter((_, ruleIndex) => ruleIndex !== index),
+        }));
+    }
+
+    async function saveSettings() {
+        setIsSettingsLoading(true);
+        setError('');
+        try {
+            const saved = await SaveTransformationSettings(settings as threadcalc.TransformationSettings) as TransformationSettings;
+            setSettings({rules: saved.rules ?? []});
+            setSettingsMessage('Настройки сохранены');
+            if (result?.filePath) {
+                const imported = await ImportThreadFilePath(result.filePath, skeinLength) as ImportResult;
+                setResult(normalizeResult(imported));
+                setCodeDrafts({});
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : String(err));
+        } finally {
+            setIsSettingsLoading(false);
+        }
+    }
+
     return (
         <main className="app-shell">
             <section className="toolbar" aria-label="Импорт">
@@ -187,6 +394,12 @@ function App() {
                     </label>
                     <button className="secondary-button" onClick={() => recalculate()} disabled={isLoading || !result}>
                         Пересчитать
+                    </button>
+                    <button className="secondary-button" onClick={openPalette} disabled={isPaletteLoading}>
+                        Палитра
+                    </button>
+                    <button className="secondary-button" onClick={openSettings} disabled={isSettingsLoading}>
+                        Настройки
                     </button>
                     <button className="primary-button" onClick={importFile} disabled={isLoading}>
                         {isLoading ? 'Импорт...' : 'Открыть TXT'}
@@ -306,6 +519,262 @@ function App() {
                             </div>
                         </header>
                         <pre className="summary-text">{summaryText}</pre>
+                    </section>
+                </div>
+            )}
+
+            {isPaletteOpen && (
+                <div
+                    className="modal-backdrop"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget) {
+                            setIsPaletteOpen(false);
+                        }
+                    }}
+                >
+                    <section className="palette-modal" role="dialog" aria-modal="true" aria-label="Палитра DMC">
+                        <header className="modal-header">
+                            <div className="modal-title">
+                                <strong>Палитра DMC</strong>
+                                <span>{filteredPalette.length} из {palette.length}</span>
+                            </div>
+                            <div className="modal-actions">
+                                <label className="palette-search">
+                                    <span>Поиск</span>
+                                    <input
+                                        value={paletteSearch}
+                                        onChange={(event) => setPaletteSearch(event.target.value)}
+                                        placeholder="Код, название, HEX"
+                                        autoFocus
+                                    />
+                                </label>
+                                <button type="button" className="icon-button" aria-label="Закрыть" onClick={() => setIsPaletteOpen(false)}>
+                                    ×
+                                </button>
+                            </div>
+                        </header>
+                        <section className="palette-editor" aria-label="Пользовательская палитра">
+                            <label>
+                                <span>Код</span>
+                                <input
+                                    value={paletteDraft.code}
+                                    onChange={(event) => setPaletteDraft((draft) => ({...draft, code: event.target.value}))}
+                                    placeholder="32"
+                                />
+                            </label>
+                            <label>
+                                <span>Название</span>
+                                <input
+                                    value={paletteDraft.name}
+                                    onChange={(event) => setPaletteDraft((draft) => ({...draft, name: event.target.value}))}
+                                    placeholder="Dark Blueberry"
+                                />
+                            </label>
+                            <label>
+                                <span>HEX</span>
+                                <input
+                                    value={paletteDraft.hex}
+                                    onChange={(event) => setPaletteDraft((draft) => ({...draft, hex: event.target.value}))}
+                                    placeholder="#4D2E8A"
+                                />
+                            </label>
+                            <div className="palette-editor-actions">
+                                <button
+                                    type="button"
+                                    className="primary-button"
+                                    onClick={savePaletteEntry}
+                                    disabled={isPaletteLoading || !paletteDraft.code.trim() || !paletteDraft.hex.trim()}
+                                >
+                                    Сохранить
+                                </button>
+                                <button type="button" className="secondary-button" onClick={clearPaletteDraft} disabled={isPaletteLoading}>
+                                    Очистить
+                                </button>
+                            </div>
+                            <div className="palette-file" title={palettePath}>
+                                <span>{paletteMessage || 'Пользовательские цвета перекрывают встроенные'}</span>
+                                <span>{palettePath}</span>
+                            </div>
+                        </section>
+                        <div className="palette-table-wrap">
+                            <table className="palette-table">
+                                <thead>
+                                <tr>
+                                    <th className="swatch-column">Цвет</th>
+                                    <th>Код</th>
+                                    <th>Название</th>
+                                    <th>HEX</th>
+                                    <th>Источник</th>
+                                    <th></th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {isPaletteLoading ? (
+                                    <tr>
+                                        <td colSpan={6} className="empty-state">Загрузка палитры...</td>
+                                    </tr>
+                                ) : filteredPalette.length ? filteredPalette.map((color) => (
+                                    <tr key={color.code}>
+                                        <td className="swatch-column">
+                                            <span className="swatch" style={{backgroundColor: color.hex}} />
+                                        </td>
+                                        <td className="code-cell">{color.code}</td>
+                                        <td className="name-cell">{color.name}</td>
+                                        <td className="hex-cell">{color.hex}</td>
+                                        <td>
+                                            <span className={`source-badge ${color.source === 'user' ? 'source-user' : ''}`}>
+                                                {color.source === 'user' ? 'польз.' : 'встроенный'}
+                                            </span>
+                                        </td>
+                                        <td className="row-actions">
+                                            <button type="button" className="text-button" onClick={() => editPaletteEntry(color)}>
+                                                Править
+                                            </button>
+                                            {color.source === 'user' && (
+                                                <button type="button" className="text-button danger-button" onClick={() => deletePaletteEntry(color.code)}>
+                                                    Удалить
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan={6} className="empty-state">Ничего не найдено</td>
+                                    </tr>
+                                )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+            )}
+
+            {isSettingsOpen && (
+                <div
+                    className="modal-backdrop"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget) {
+                            setIsSettingsOpen(false);
+                        }
+                    }}
+                >
+                    <section className="settings-modal" role="dialog" aria-modal="true" aria-label="Настройки преобразования">
+                        <header className="modal-header">
+                            <div className="modal-title">
+                                <strong>Преобразование описаний</strong>
+                                <span>{(settings.rules ?? []).length} правил</span>
+                            </div>
+                            <div className="modal-actions">
+                                <button type="button" className="secondary-button" onClick={addTransformRule} disabled={isSettingsLoading}>
+                                    Добавить
+                                </button>
+                                <button type="button" className="primary-button" onClick={saveSettings} disabled={isSettingsLoading}>
+                                    Сохранить
+                                </button>
+                                <button type="button" className="icon-button" aria-label="Закрыть" onClick={() => setIsSettingsOpen(false)}>
+                                    ×
+                                </button>
+                            </div>
+                        </header>
+                        <div className="settings-help">
+                            <span>{settingsMessage || 'Если Description совпал с правилом, код меняется перед нормализацией и поиском палитры.'}</span>
+                            <span title={settingsPath}>{settingsPath}</span>
+                        </div>
+                        <div className="settings-table-wrap">
+                            <table className="settings-table">
+                                <thead>
+                                <tr>
+                                    <th>Вкл.</th>
+                                    <th>Столбец</th>
+                                    <th>Режим</th>
+                                    <th>Значение</th>
+                                    <th>Убрать</th>
+                                    <th>Префикс</th>
+                                    <th>Суффикс</th>
+                                    <th></th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {isSettingsLoading ? (
+                                    <tr>
+                                        <td colSpan={8} className="empty-state">Загрузка настроек...</td>
+                                    </tr>
+                                ) : (settings.rules ?? []).length ? (settings.rules ?? []).map((rule, index) => (
+                                    <tr key={index}>
+                                        <td className="enabled-cell">
+                                            <input
+                                                type="checkbox"
+                                                checked={rule.enabled}
+                                                onChange={(event) => updateTransformRule(index, {enabled: event.target.checked})}
+                                            />
+                                        </td>
+                                        <td>
+                                            <select
+                                                className="settings-input"
+                                                value={rule.matchColumn || 'description'}
+                                                onChange={(event) => updateTransformRule(index, {matchColumn: event.target.value})}
+                                            >
+                                                <option value="code">1-й: код</option>
+                                                <option value="description">2-й: описание</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select
+                                                className="settings-input"
+                                                value={rule.matchMode}
+                                                onChange={(event) => updateTransformRule(index, {matchMode: event.target.value})}
+                                            >
+                                                <option value="equals">равно</option>
+                                                <option value="contains">содержит</option>
+                                                <option value="prefix">начинается</option>
+                                                <option value="suffix">заканчивается</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input
+                                                className="settings-input"
+                                                value={rule.description}
+                                                onChange={(event) => updateTransformRule(index, {description: event.target.value})}
+                                                placeholder={rule.matchColumn === 'code' ? 'DMC' : 'DMC:E'}
+                                            />
+                                        </td>
+                                        <td>
+                                            <input
+                                                className="settings-input short-settings-input"
+                                                value={rule.stripCodePrefix}
+                                                onChange={(event) => updateTransformRule(index, {stripCodePrefix: event.target.value})}
+                                                placeholder="DMC"
+                                            />
+                                        </td>
+                                        <td>
+                                            <input
+                                                className="settings-input short-settings-input"
+                                                value={rule.codePrefix}
+                                                onChange={(event) => updateTransformRule(index, {codePrefix: event.target.value})}
+                                                placeholder="E"
+                                            />
+                                        </td>
+                                        <td>
+                                            <input
+                                                className="settings-input short-settings-input"
+                                                value={rule.codeSuffix}
+                                                onChange={(event) => updateTransformRule(index, {codeSuffix: event.target.value})}
+                                            />
+                                        </td>
+                                        <td className="row-actions">
+                                            <button type="button" className="text-button danger-button" onClick={() => deleteTransformRule(index)}>
+                                                Удалить
+                                            </button>
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan={8} className="empty-state">Правил нет</td>
+                                    </tr>
+                                )}
+                                </tbody>
+                            </table>
+                        </div>
                     </section>
                 </div>
             )}

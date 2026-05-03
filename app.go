@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 
+	"counting-embroidery-threads/internal/dmc"
 	"counting-embroidery-threads/internal/threadcalc"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -50,7 +51,52 @@ func (a *App) ImportThreadFile(skeinLengthMeters float64) (*threadcalc.ImportRes
 	return threadcalc.ImportFile(path, skeinLengthMeters)
 }
 
+// ImportThreadFilePath imports a known TXT report path without opening a dialog.
+func (a *App) ImportThreadFilePath(path string, skeinLengthMeters float64) (*threadcalc.ImportResult, error) {
+	return threadcalc.ImportFile(path, skeinLengthMeters)
+}
+
 // RecalculateThreadCodes applies user code corrections to the current result.
 func (a *App) RecalculateThreadCodes(result *threadcalc.ImportResult, corrections []threadcalc.CodeCorrection, skeinLengthMeters float64) (*threadcalc.ImportResult, error) {
 	return threadcalc.RecalculateWithCorrections(result, corrections, skeinLengthMeters)
+}
+
+// GetBuiltinPalette returns the bundled DMC palette for browsing in the UI.
+func (a *App) GetBuiltinPalette() ([]dmc.PaletteEntry, error) {
+	return dmc.LoadPaletteEntries()
+}
+
+// GetPalette returns the bundled DMC palette with user entries overlaid.
+func (a *App) GetPalette() ([]dmc.PaletteEntry, error) {
+	return dmc.LoadEffectivePaletteEntries()
+}
+
+// GetUserPalettePath returns the JSON file path used for user palette overrides.
+func (a *App) GetUserPalettePath() (string, error) {
+	return dmc.UserPalettePath()
+}
+
+// SaveUserPaletteEntry creates or replaces one user palette entry.
+func (a *App) SaveUserPaletteEntry(entry dmc.PaletteEntry) ([]dmc.PaletteEntry, error) {
+	return dmc.SaveUserPaletteEntry(entry)
+}
+
+// DeleteUserPaletteEntry removes one user palette entry.
+func (a *App) DeleteUserPaletteEntry(code string) ([]dmc.PaletteEntry, error) {
+	return dmc.DeleteUserPaletteEntry(code)
+}
+
+// GetTransformationSettings returns saved report transformation settings.
+func (a *App) GetTransformationSettings() (*threadcalc.TransformationSettings, error) {
+	return threadcalc.LoadTransformationSettings()
+}
+
+// GetTransformationSettingsPath returns the JSON file path used for transformation settings.
+func (a *App) GetTransformationSettingsPath() (string, error) {
+	return threadcalc.TransformationSettingsPath()
+}
+
+// SaveTransformationSettings stores report transformation settings.
+func (a *App) SaveTransformationSettings(settings *threadcalc.TransformationSettings) (*threadcalc.TransformationSettings, error) {
+	return threadcalc.SaveTransformationSettings(settings)
 }

@@ -234,6 +234,66 @@ func TestUnreadableNormalizationNotesAreHidden(t *testing.T) {
 	}
 }
 
+func TestDescriptionTransformRuleAddsCodePrefix(t *testing.T) {
+	palette := dmc.Palette{
+		"E321": {Hex: "#BD1136", Name: "Red Ruby"},
+	}
+	report := "Thread lengths\nThread (DMC)\tDescription\tStitches\tBackstitches\tLength(m)\tBacks\tTotal\n321\tDMC:E\t1\t0\t1.0\t0.0\t1.0\n"
+	settings := &TransformationSettings{
+		Rules: []DescriptionTransformRule{
+			{Enabled: true, MatchColumn: "description", MatchMode: "equals", Description: "DMC:E", CodePrefix: "E"},
+		},
+	}
+
+	result := parseAndCalculateWithSettings(report, palette, DefaultSkeinLengthMeters, settings)
+
+	item := requireItem(t, result, "E321")
+	if item.ColorHex != "#BD1136" {
+		t.Fatalf("E321 color = %s, want #BD1136", item.ColorHex)
+	}
+	if !containsNote(item.Notes, "DMC:E: 321 -> E321") {
+		t.Fatalf("expected transform note, got %v", item.Notes)
+	}
+}
+
+func TestTransformRulesCanUseCodeAndDescriptionColumnsInSequence(t *testing.T) {
+	palette := dmc.Palette{
+		"C738": {Hex: "#111111", Name: "Etoile"},
+	}
+	report := "Thread lengths\nThread (DMC)\tDescription\tStitches\tBackstitches\tLength(m)\tBacks\tTotal\nDMC738\tEtoile:C\t1\t0\t1.0\t0.0\t1.0\n"
+	settings := &TransformationSettings{
+		Rules: []DescriptionTransformRule{
+			{Enabled: true, MatchColumn: "code", MatchMode: "prefix", Description: "DMC", StripCodePrefix: "DMC"},
+			{Enabled: true, MatchColumn: "description", MatchMode: "equals", Description: "Etoile:C", CodePrefix: "C"},
+		},
+	}
+
+	result := parseAndCalculateWithSettings(report, palette, DefaultSkeinLengthMeters, settings)
+
+	item := requireItem(t, result, "C738")
+	if item.ColorHex != "#111111" {
+		t.Fatalf("C738 color = %s, want #111111", item.ColorHex)
+	}
+	if !containsNote(item.Notes, "код: DMC: DMC738 -> 738") {
+		t.Fatalf("expected code-column transform note, got %v", item.Notes)
+	}
+	if !containsNote(item.Notes, "Etoile:C: 738 -> C738") {
+		t.Fatalf("expected description-column transform note, got %v", item.Notes)
+	}
+}
+
+func TestDescriptionTransformRuleAppliesToExampleFile(t *testing.T) {
+	result, err := ImportFile(filepath.Join("..", "..", "examle", "test.txt"), DefaultSkeinLengthMeters)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, code := range []string{"E321", "E130", "B5200", "S553", "C738"} {
+		if !itemExists(result, code) {
+			t.Fatalf("expected %s after description transform", code)
+		}
+	}
+}
+
 func TestBlendsWithThreeOrMorePartsStillUseHalfTotal(t *testing.T) {
 	palette := dmc.Palette{
 		"111": {Hex: "#111111", Name: "One"},

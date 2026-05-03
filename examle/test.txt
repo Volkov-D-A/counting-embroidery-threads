@@ -1,0 +1,58 @@
+Длины нитей
+Нить (DMC)	Описание	Стежки	Бэкстичи	Длина (м)	Бэкстичи	Всего
+761	Sunrise rose	35	0	  0.2	  0.0	  0.2
+211	Pale violet	31	0	  0.2	  0.0	  0.2
+793	Medium cornflower blue 	29	0	  0.1	  0.0	  0.1
+825	Sea blue 	29	0	  0.1	  0.0	  0.1
+943	Acid green 	27	0	  0.1	  0.0	  0.1
+3013	Resin green	18	0	  0.1	  0.0	  0.1
+742	Light tangerine	43	0	  0.2	  0.0	  0.2
+642	Earth grey 	23	0	  0.1	  0.0	  0.1
+130	DMC_light_effects:E	13	0	  0.1	  0.0	  0.1
+135	DMC_light_effects:E	15	0	  0.1	  0.0	  0.1
+155	DMC:E	14	0	  0.1	  0.0	  0.1
+316	DMC:E	14	0	  0.1	  0.0	  0.1
+321	DMC:E	15	0	  0.1	  0.0	  0.1
+334	DMC:E	19	0	  0.1	  0.0	  0.1
+699	DMC_light_effects:E	21	0	  0.1	  0.0	  0.1
+3837	DMC_light_effects:E	30	0	  0.2	  0.0	  0.2
+3843	DMC:E	31	0	  0.2	  0.0	  0.2
+3849	DMC:E	30	0	  0.2	  0.0	  0.2
+703	DMC:E	22	0	  0.1	  0.0	  0.1
+718	DMC_light_effects:E	22	0	  0.1	  0.0	  0.1
+815	DMC:E	25	0	  0.1	  0.0	  0.1
+825	DMC:E	29	0	  0.1	  0.0	  0.1
+168	DMC:E	22	0	  0.1	  0.0	  0.1
+301	DMC:E	26	0	  0.1	  0.0	  0.1
+317	DMC:E	25	0	  0.1	  0.0	  0.1
+677	DMC:E	33	0	  0.2	  0.0	  0.2
+3821	DMC:E	25	0	  0.1	  0.0	  0.1
+3852	DMC:E	28	0	  0.1	  0.0	  0.1
+898	DMC:E	28	0	  0.1	  0.0	  0.1
+436	DMC:E	23	0	  0.1	  0.0	  0.1
+3685	DMC:E	26	0	  0.1	  0.0	  0.1
+310	DMC:E	35	0	  0.2	  0.0	  0.2
+415	DMC:E	22	0	  0.1	  0.0	  0.1
+211	DMC:E	26	0	  0.1	  0.0	  0.1
+746	DMC_light_effects:E	27	0	  0.1	  0.0	  0.1
+966	DMC:E	21	0	  0.1	  0.0	  0.1
+818	DMC_light_effects:E	32	0	  0.2	  0.0	  0.2
+747	DMC_light_effects:E	22	0	  0.1	  0.0	  0.1
+967	DMC_light_effects:E	46	0	  0.2	  0.0	  0.2
+3747	DMC:E	28	0	  0.1	  0.0	  0.1
+5200	DMC_light_effects:B	34	0	  0.2	  0.0	  0.2
+980	DMC:E	26	0	  0.1	  0.0	  0.1
+990	DMC:E	29	0	  0.1	  0.0	  0.1
+940	DMC:E	25	0	  0.1	  0.0	  0.1
+553	DMCS:S Violet	26	0	  0.1	  0.0	  0.1
+741	DMCS:S MD Tangerine	16	0	  0.1	  0.0	  0.1
+976	DMCS:S MD Golden Brown	20	0	  0.1	  0.0	  0.1
+DMC5284	Metalic	21	0	  0.1	  0.0	  0.1
+5269	DMCM	12	0	  0.1	  0.0	  0.1
+5290	DMCM	26	0	  0.1	  0.0	  0.1
+DMC5291	Metalic	6	0	  0.1	  0.0	  0.1
+DMC738	Etoile:C	35	0	  0.2	  0.0	  0.2
+DMC444	Etoile:C	28	0	  0.1	  0.0	  0.1
+DMC740	Etoile:C	38	0	  0.2	  0.0	  0.2
+C740+940	+ E	83	0	  0.4	  0.0	  0.4
+E334+677	+ E	173	0	  0.9	  0.0	  0.9

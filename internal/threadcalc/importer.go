@@ -13,6 +13,7 @@ import (
 	"unicode/utf8"
 
 	"counting-embroidery-threads/internal/dmc"
+	"counting-embroidery-threads/internal/dmccode"
 
 	"golang.org/x/text/encoding/charmap"
 )
@@ -31,12 +32,16 @@ func ImportFile(path string, skeinLengthMeters float64) (*ImportResult, error) {
 		return nil, err
 	}
 
-	palette, err := dmc.LoadPalette()
+	palette, err := dmc.LoadEffectivePalette()
+	if err != nil {
+		return nil, err
+	}
+	settings, err := LoadTransformationSettings()
 	if err != nil {
 		return nil, err
 	}
 
-	result := parseAndCalculate(text, palette, skeinLengthMeters)
+	result := parseAndCalculateWithSettings(text, palette, skeinLengthMeters, settings)
 	result.FilePath = path
 	result.FileName = filepath.Base(path)
 	result.Encoding = encoding
@@ -53,7 +58,7 @@ func RecalculateWithCorrections(source *ImportResult, corrections []CodeCorrecti
 		skeinLengthMeters = DefaultSkeinLengthMeters
 	}
 
-	palette, err := dmc.LoadPalette()
+	palette, err := dmc.LoadEffectivePalette()
 	if err != nil {
 		return nil, err
 	}
@@ -127,9 +132,14 @@ func ioReadAll(reader interface {
 }
 
 func parseAndCalculate(text string, palette dmc.Palette, skeinLengthMeters float64) *ImportResult {
+	return parseAndCalculateWithSettings(text, palette, skeinLengthMeters, DefaultTransformationSettings())
+}
+
+func parseAndCalculateWithSettings(text string, palette dmc.Palette, skeinLengthMeters float64, settings *TransformationSettings) *ImportResult {
 	if skeinLengthMeters <= 0 {
 		skeinLengthMeters = DefaultSkeinLengthMeters
 	}
+	settings = normalizeTransformationSettings(settings)
 
 	parseResult := &ImportResult{
 		SkeinLengthMeters: skeinLengthMeters,
@@ -180,6 +190,7 @@ func parseAndCalculate(text string, palette dmc.Palette, skeinLengthMeters float
 		}
 
 		rawCode := strings.TrimSpace(fields[0])
+		description := strings.TrimSpace(fields[1])
 		totalMeters, err := strconv.ParseFloat(strings.TrimSpace(fields[6]), 64)
 		if err != nil {
 			parseResult.Warnings = append(parseResult.Warnings, fmt.Sprintf("Строка %d пропущена: не удалось прочитать метраж %q", lineNumber, fields[6]))
@@ -188,22 +199,26 @@ func parseAndCalculate(text string, palette dmc.Palette, skeinLengthMeters float
 
 		parts := []string{rawCode}
 		share := totalMeters
-		isBlend := strings.Contains(rawCode, "+") || strings.HasPrefix(strings.TrimSpace(fields[1]), "+")
+		isBlend := strings.Contains(rawCode, "+") || strings.HasPrefix(description, "+")
 		if isBlend {
-			parts = blendParts(rawCode, fields[1])
+			parts = blendParts(rawCode, description)
 			share = totalMeters / 2
 		}
 		parseResult.RowsImported++
 
 		for _, part := range parts {
-			normalized := normalizeCode(part)
+			transformed, ruleNotes := applyTransformRules(part, description, settings)
+			normalized := normalizeCode(transformed)
 			if normalized == "" {
 				continue
 			}
 			metersByCode[normalized] += share
 
 			ensureNoteSet(notesByCode, normalized)
-			cleanPart := strings.TrimSpace(part)
+			cleanPart := strings.TrimSpace(transformed)
+			for _, ruleNote := range ruleNotes {
+				notesByCode[normalized][ruleNote] = struct{}{}
+			}
 			if shouldShowNormalizationNote(cleanPart, normalized) {
 				notesByCode[normalized][fmt.Sprintf("%s -> %s", cleanPart, normalized)] = struct{}{}
 			}
@@ -278,6 +293,71 @@ func blendParts(rawCode, description string) []string {
 		parts = append(parts, descriptionPart)
 	}
 	return parts
+}
+
+func applyTransformRules(code, description string, settings *TransformationSettings) (string, []string) {
+	cleanCode := strings.TrimSpace(code)
+	if cleanCode == "" {
+		return cleanCode, nil
+	}
+
+	transformed := dmccodeBase(cleanCode)
+	notes := []string{}
+	for _, rule := range settings.Rules {
+		matchValue := description
+		if rule.MatchColumn == "code" {
+			matchValue = transformed
+		}
+		if !rule.Enabled || !transformRuleMatches(matchValue, rule) {
+			continue
+		}
+
+		before := transformed
+		if rule.StripCodePrefix != "" {
+			transformed = strings.TrimPrefix(transformed, rule.StripCodePrefix)
+		}
+		if rule.CodePrefix != "" && !strings.HasPrefix(transformed, rule.CodePrefix) {
+			transformed = rule.CodePrefix + transformed
+		}
+		if rule.CodeSuffix != "" && !strings.HasSuffix(transformed, rule.CodeSuffix) {
+			transformed += rule.CodeSuffix
+		}
+
+		if transformed != before {
+			notes = append(notes, fmt.Sprintf("%s: %s -> %s", transformRuleLabel(rule), before, transformed))
+		}
+	}
+	return transformed, notes
+}
+
+func dmccodeBase(code string) string {
+	return strings.TrimSpace(dmccode.BaseNormalize(code))
+}
+
+func transformRuleMatches(value string, rule DescriptionTransformRule) bool {
+	actual := strings.ToLower(strings.TrimSpace(value))
+	expected := strings.ToLower(strings.TrimSpace(rule.Description))
+	if expected == "" {
+		return false
+	}
+
+	switch rule.MatchMode {
+	case "contains":
+		return strings.Contains(actual, expected)
+	case "prefix":
+		return strings.HasPrefix(actual, expected)
+	case "suffix":
+		return strings.HasSuffix(actual, expected)
+	default:
+		return actual == expected
+	}
+}
+
+func transformRuleLabel(rule DescriptionTransformRule) string {
+	if rule.MatchColumn == "code" {
+		return "код: " + rule.Description
+	}
+	return rule.Description
 }
 
 func normalizeNewlines(text string) string {

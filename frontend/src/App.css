@@ -1,6 +1,6 @@
 .app-shell {
     min-height: 100vh;
-    padding: 28px;
+    padding: 20px;
     color: #20242a;
 }
 
@@ -8,63 +8,72 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 18px;
-    margin-bottom: 14px;
+    gap: 10px 14px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
 }
 
 .toolbar-status {
+    flex: 1 1 430px;
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 10px;
     min-width: 0;
 }
 
 .file-name {
-    min-width: 180px;
-    max-width: 360px;
+    min-width: 140px;
+    max-width: 300px;
     overflow: hidden;
     color: #344054;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .toolbar-actions {
+    flex: 0 1 610px;
     display: flex;
-    align-items: flex-end;
-    gap: 12px;
+    align-items: end;
+    justify-content: flex-end;
+    gap: 6px;
+    min-width: 0;
+    flex-wrap: wrap;
 }
 
 .field {
-    display: grid;
+    display: flex;
+    align-items: center;
     gap: 6px;
     color: #4a5563;
-    font-size: 13px;
+    font-size: 12px;
     text-align: left;
+    white-space: nowrap;
 }
 
 .field input {
-    width: 132px;
-    height: 38px;
+    width: 76px;
+    height: 32px;
     box-sizing: border-box;
     border: 1px solid #ccd4dd;
     border-radius: 6px;
-    padding: 0 10px;
+    padding: 0 8px;
     background: #ffffff;
     color: #20242a;
     font: inherit;
 }
 
 .primary-button {
-    height: 38px;
-    min-width: 124px;
+    height: 32px;
+    min-width: 104px;
     border: 1px solid #1f6f5a;
     border-radius: 6px;
-    padding: 0 16px;
+    padding: 0 11px;
     background: #237a63;
     color: #ffffff;
     font: inherit;
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
 }
@@ -74,14 +83,15 @@
 }
 
 .secondary-button {
-    height: 38px;
-    min-width: 112px;
+    height: 32px;
+    min-width: 86px;
     border: 1px solid #c2ccd7;
     border-radius: 6px;
-    padding: 0 14px;
+    padding: 0 10px;
     background: #ffffff;
     color: #334155;
     font: inherit;
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
 }
@@ -99,31 +109,32 @@
 .summary {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     margin: 0;
+    min-width: 0;
 }
 
 .metric {
-    min-width: 82px;
-    min-height: 42px;
+    min-width: 66px;
+    min-height: 32px;
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 8px;
+    gap: 6px;
     box-sizing: border-box;
     border: 1px solid #dde2e8;
-    border-radius: 7px;
-    padding: 8px 10px;
+    border-radius: 6px;
+    padding: 5px 7px;
     background: #ffffff;
 }
 
 .metric span {
     color: #667085;
-    font-size: 12px;
+    font-size: 11px;
 }
 
 .metric strong {
-    font-size: 18px;
+    font-size: 15px;
     line-height: 1;
 }
 
@@ -338,6 +349,30 @@ tbody tr:hover {
     box-shadow: 0 24px 64px rgba(15, 23, 42, 0.24);
 }
 
+.palette-modal {
+    width: min(920px, 100%);
+    max-height: min(760px, calc(100vh - 44px));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #d7dee7;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 24px 64px rgba(15, 23, 42, 0.24);
+}
+
+.settings-modal {
+    width: min(880px, 100%);
+    max-height: min(720px, calc(100vh - 44px));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #d7dee7;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 24px 64px rgba(15, 23, 42, 0.24);
+}
+
 .modal-header {
     display: flex;
     align-items: center;
@@ -350,6 +385,16 @@ tbody tr:hover {
 .modal-header strong {
     color: #20242a;
     font-size: 14px;
+}
+
+.modal-title {
+    display: grid;
+    gap: 2px;
+}
+
+.modal-title span {
+    color: #667085;
+    font-size: 12px;
 }
 
 .modal-actions {
@@ -394,6 +439,211 @@ tbody tr:hover {
     white-space: pre;
 }
 
+.palette-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #667085;
+    font-size: 12px;
+}
+
+.palette-search input {
+    width: 210px;
+    height: 32px;
+    box-sizing: border-box;
+    border: 1px solid #ccd4dd;
+    border-radius: 6px;
+    padding: 0 9px;
+    background: #ffffff;
+    color: #20242a;
+    font: inherit;
+    font-size: 13px;
+}
+
+.palette-search input:focus {
+    border-color: #237a63;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(35, 122, 99, 0.14);
+}
+
+.palette-table-wrap {
+    overflow: auto;
+}
+
+.palette-table {
+    min-width: 820px;
+}
+
+.hex-cell {
+    color: #52606f;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+.settings-help {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid #e7ebf0;
+    padding: 8px 12px;
+    background: #fbfcfd;
+    color: #667085;
+    font-size: 12px;
+}
+
+.settings-help span:last-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.settings-table-wrap {
+    overflow: auto;
+}
+
+.settings-table {
+    min-width: 760px;
+}
+
+.settings-input {
+    width: 100%;
+    height: 32px;
+    box-sizing: border-box;
+    border: 1px solid #ccd4dd;
+    border-radius: 6px;
+    padding: 0 9px;
+    background: #ffffff;
+    color: #20242a;
+    font: inherit;
+    font-size: 13px;
+}
+
+.settings-input:focus {
+    border-color: #237a63;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(35, 122, 99, 0.14);
+}
+
+.short-settings-input {
+    max-width: 92px;
+}
+
+.enabled-cell {
+    width: 48px;
+    text-align: center;
+}
+
+.palette-editor {
+    display: grid;
+    grid-template-columns: 110px minmax(180px, 1fr) 132px auto;
+    gap: 10px;
+    border-bottom: 1px solid #e7ebf0;
+    padding: 10px 12px;
+    background: #fbfcfd;
+}
+
+.palette-editor label {
+    display: grid;
+    gap: 5px;
+    color: #667085;
+    font-size: 12px;
+}
+
+.palette-editor input {
+    width: 100%;
+    height: 32px;
+    box-sizing: border-box;
+    border: 1px solid #ccd4dd;
+    border-radius: 6px;
+    padding: 0 9px;
+    background: #ffffff;
+    color: #20242a;
+    font: inherit;
+    font-size: 13px;
+}
+
+.palette-editor input:focus {
+    border-color: #237a63;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(35, 122, 99, 0.14);
+}
+
+.palette-editor-actions {
+    display: flex;
+    align-items: end;
+    gap: 8px;
+}
+
+.palette-editor-actions .primary-button,
+.palette-editor-actions .secondary-button {
+    height: 32px;
+}
+
+.palette-file {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    color: #667085;
+    font-size: 12px;
+}
+
+.palette-file span:last-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.source-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    border: 1px solid #d7dee7;
+    border-radius: 999px;
+    padding: 1px 7px;
+    background: #f8fafc;
+    color: #52606f;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.source-user {
+    border-color: #cbe1d8;
+    background: #f1faf6;
+    color: #237a63;
+}
+
+.row-actions {
+    width: 142px;
+}
+
+.text-button {
+    border: 0;
+    padding: 0 6px 0 0;
+    background: transparent;
+    color: #237a63;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.text-button:hover {
+    color: #1d6754;
+    text-decoration: underline;
+}
+
+.danger-button {
+    color: #b42318;
+}
+
+.danger-button:hover {
+    color: #912018;
+}
+
 @media (max-width: 820px) {
     .app-shell {
         padding: 18px;
@@ -419,6 +669,7 @@ tbody tr:hover {
     }
 
     .field input,
+    .secondary-button,
     .primary-button {
         width: 100%;
     }
@@ -441,5 +692,25 @@ tbody tr:hover {
 
     .modal-actions {
         justify-content: flex-end;
+    }
+
+    .palette-editor {
+        grid-template-columns: 1fr;
+    }
+
+    .palette-editor-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .palette-search {
+        align-items: stretch;
+        flex: 1;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .palette-search input {
+        width: 100%;
     }
 }

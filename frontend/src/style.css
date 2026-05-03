@@ -1,0 +1,19 @@
+html {
+    background: #f7f8fa;
+}
+
+body {
+    margin: 0;
+    background: #f7f8fa;
+    color: #20242a;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+button,
+input {
+    font-family: inherit;
+}
+
+#root {
+    min-height: 100vh;
+}

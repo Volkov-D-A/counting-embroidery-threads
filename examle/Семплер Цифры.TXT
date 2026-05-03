@@ -1,0 +1,29 @@
+Длины нитей
+Нить (DMC)	Описание	Стежки	Бэкстичи	Длина (м)	Бэкстичи	Всего
+433	Chocolate brown 	792	109	  4.0	  0.3	  4.3
+434	Cigar brown 	505	0	  2.5	  0.0	  2.5
+436	Teddy brown 	1348	0	  6.8	  0.0	  6.8
+726	Mimosa yellow	886	0	  4.5	  0.0	  4.5
+746	Vanillla	44	432	  0.2	  1.4	  1.6
+780	Chestnut tree brown 	666	0	  3.4	  0.0	  3.4
+783	Old gold 	1844	0	  9.3	  0.0	  9.3
+801	Mink brown 	76	0	  0.4	  0.0	  0.4
+893	Light Petunia pink	197	0	  1.0	  0.0	  1.0
+894	Rose pink 	199	0	  1.0	  0.0	  1.0
+938	Espresso brown 	0	130	  0.0	  0.4	  0.4
+967	Pale apricot	1150	0	  5.8	  0.0	  5.8
+972	Curry yellow	364	0	  1.8	  0.0	  1.8
+3771	Sandy rose 	396	0	  2.0	  0.0	  2.0
+ 
+
+Bead Count
+Bead colour
+	Quantity
+
+02023 Root Beer	132
+03016 Vanilla 	427
+02004 Tea Rose	11
+00525 Light Green	11
+02062 Cr. Light Crimson	244
+00479 White	23
+02007 Satin Blue	12

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "counting-embroidery-threads",
+  "outputfilename": "counting-embroidery-threads",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "Volkov-D-A",
+    "email": "dimas.volkov@gmail.com"
+  }
+}

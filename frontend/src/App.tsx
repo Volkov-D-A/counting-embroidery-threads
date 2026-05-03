@@ -5,6 +5,7 @@ import {threadcalc} from '../wailsjs/go/models';
 
 type ThreadResult = {
     code: string;
+    colorName: string;
     colorHex: string;
     paletteFound: boolean;
     meters: number;
@@ -31,13 +32,24 @@ type CodeCorrection = {
     to: string;
 };
 
+type SummaryLanguage = 'ru' | 'eng';
+
 const metersFormatter = new Intl.NumberFormat('ru-RU', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
 });
 
+const compactMetersFormatter = new Intl.NumberFormat('ru-RU', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+});
+
 function formatMeters(value: number) {
     return `${metersFormatter.format(value)} м`;
+}
+
+function formatCompactMeters(value: number) {
+    return compactMetersFormatter.format(value);
 }
 
 function App() {
@@ -46,12 +58,21 @@ function App() {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [codeDrafts, setCodeDrafts] = useState<Record<string, string>>({});
+    const [summaryLanguage, setSummaryLanguage] = useState<SummaryLanguage | null>(null);
+    const [copyStatus, setCopyStatus] = useState('');
     const items = result?.items ?? [];
     const warnings = result?.warnings ?? [];
 
     const unknownColorCount = useMemo(() => {
         return items.filter((item) => !item.paletteFound).length;
     }, [items]);
+
+    const summaryText = useMemo(() => {
+        if (!summaryLanguage) {
+            return '';
+        }
+        return formatSummary(items, summaryLanguage);
+    }, [items, summaryLanguage]);
 
     async function importFile() {
         setIsLoading(true);
@@ -109,12 +130,43 @@ function App() {
         setSkeinLength(Number.isFinite(value) ? value : 8);
     }
 
+    function openSummary(language: SummaryLanguage) {
+        setCopyStatus('');
+        setSummaryLanguage(language);
+    }
+
+    async function copySummary() {
+        if (!summaryText) {
+            return;
+        }
+
+        try {
+            await copyToClipboard(summaryText);
+            setCopyStatus('Скопировано');
+        } catch (err) {
+            setCopyStatus('Не удалось скопировать');
+        }
+    }
+
     return (
         <main className="app-shell">
             <section className="toolbar" aria-label="Импорт">
-                <div>
-                    <h1>Подсчет нитей DMC</h1>
+                <div className="toolbar-status">
                     <div className="file-name">{result?.fileName ?? 'Файл не выбран'}</div>
+                    <section className="summary" aria-label="Сводка">
+                        <div className="metric">
+                            <span>Цветов</span>
+                            <strong>{items.length}</strong>
+                        </div>
+                        <div className="metric">
+                            <span>Строк</span>
+                            <strong>{result?.rowsImported ?? 0}</strong>
+                        </div>
+                        <div className="metric">
+                            <span>Без палитры</span>
+                            <strong>{unknownColorCount}</strong>
+                        </div>
+                    </section>
                 </div>
 
                 <div className="toolbar-actions">
@@ -144,37 +196,6 @@ function App() {
 
             {error && <div className="alert alert-error">{error}</div>}
 
-            <section className="summary" aria-label="Сводка">
-                <div className="metric">
-                    <span>Цветов</span>
-                    <strong>{items.length}</strong>
-                </div>
-                <div className="metric">
-                    <span>Метраж</span>
-                    <strong>{formatMeters(result?.totalMeters ?? 0)}</strong>
-                </div>
-                <div className="metric">
-                    <span>Мотков</span>
-                    <strong>{result?.totalSkeins ?? 0}</strong>
-                </div>
-                <div className="metric">
-                    <span>Строк импорта</span>
-                    <strong>{result?.rowsImported ?? 0}</strong>
-                </div>
-                <div className="metric">
-                    <span>Без палитры</span>
-                    <strong>{unknownColorCount}</strong>
-                </div>
-            </section>
-
-            {result && (
-                <section className="meta-strip" aria-label="Детали импорта">
-                    <span>{result.encoding}</span>
-                    <span>{result.beadRowsIgnored} строк бисера проигнорировано</span>
-                    <span>{formatMeters(result.skeinLengthMeters)} в мотке</span>
-                </section>
-            )}
-
             {warnings.length ? (
                 <section className="warnings" aria-label="Предупреждения">
                     {warnings.map((warning) => (
@@ -189,6 +210,7 @@ function App() {
                     <tr>
                         <th className="swatch-column">Цвет</th>
                         <th>Код DMC</th>
+                        <th>Название</th>
                         <th className="number-column">Метраж</th>
                         <th className="number-column">Мотки</th>
                         <th>Статус</th>
@@ -231,25 +253,62 @@ function App() {
                                         }}
                                     />
                                 </td>
+                                <td className="name-cell">{item.colorName || 'не найдено'}</td>
                                 <td className="number-column">{formatMeters(item.meters)}</td>
                                 <td className="number-column">{item.skeins}</td>
                                 <td>
                                     <div className="notes">
                                         {notes.length ? notes.map((note) => (
                                             <span className="note" key={note}>{note}</span>
-                                        )) : <span className="note note-muted">OK</span>}
+                                        )) : <span className="note note-muted">ОК</span>}
                                     </div>
                                 </td>
                             </tr>
                         )
                     }) : (
                         <tr>
-                            <td colSpan={5} className="empty-state">Нет данных</td>
+                            <td colSpan={6} className="empty-state">Нет данных</td>
                         </tr>
                     )}
                     </tbody>
                 </table>
             </section>
+
+            <div className="floating-summary-actions" aria-label="Компактный результат">
+                <button type="button" onClick={() => openSummary('ru')} disabled={!items.length}>
+                    RU
+                </button>
+                <button type="button" onClick={() => openSummary('eng')} disabled={!items.length}>
+                    ENG
+                </button>
+            </div>
+
+            {summaryLanguage && (
+                <div
+                    className="modal-backdrop"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget) {
+                            setSummaryLanguage(null);
+                        }
+                    }}
+                >
+                    <section className="summary-modal" role="dialog" aria-modal="true" aria-label="Компактный результат">
+                        <header className="modal-header">
+                            <strong>{summaryLanguage === 'ru' ? 'RU' : 'ENG'}</strong>
+                            <div className="modal-actions">
+                                <span className="copy-status">{copyStatus}</span>
+                                <button type="button" className="secondary-button" onClick={copySummary}>
+                                    Копировать
+                                </button>
+                                <button type="button" className="icon-button" aria-label="Закрыть" onClick={() => setSummaryLanguage(null)}>
+                                    ×
+                                </button>
+                            </div>
+                        </header>
+                        <pre className="summary-text">{summaryText}</pre>
+                    </section>
+                </div>
+            )}
         </main>
     );
 }
@@ -260,6 +319,42 @@ function normalizeResult(result: ImportResult): ImportResult {
         items: result.items ?? [],
         warnings: result.warnings ?? [],
     };
+}
+
+function formatSummary(items: ThreadResult[], language: SummaryLanguage) {
+    const unit = language === 'ru' ? 'шт.' : 'pcs.';
+    const meterUnit = language === 'ru' ? 'м' : 'm';
+
+    return items
+        .map((item) => `${item.code}   ${item.skeins}${unit} (${formatCompactMeters(item.meters)}${meterUnit})`)
+        .join('\n');
+}
+
+async function copyToClipboard(text: string) {
+    if (navigator.clipboard?.writeText) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return;
+        } catch (err) {
+            // Fall back to the legacy command below for stricter WebView clipboard settings.
+        }
+    }
+
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.setAttribute('readonly', 'true');
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+
+    try {
+        if (!document.execCommand('copy')) {
+            throw new Error('copy command failed');
+        }
+    } finally {
+        document.body.removeChild(textArea);
+    }
 }
 
 export default App;

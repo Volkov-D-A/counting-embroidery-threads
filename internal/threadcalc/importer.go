@@ -188,7 +188,8 @@ func parseAndCalculate(text string, palette dmc.Palette, skeinLengthMeters float
 
 		parts := []string{rawCode}
 		share := totalMeters
-		if strings.Contains(rawCode, "+") || strings.HasPrefix(strings.TrimSpace(fields[1]), "+") {
+		isBlend := strings.Contains(rawCode, "+") || strings.HasPrefix(strings.TrimSpace(fields[1]), "+")
+		if isBlend {
 			parts = blendParts(rawCode, fields[1])
 			share = totalMeters / 2
 		}
@@ -203,11 +204,8 @@ func parseAndCalculate(text string, palette dmc.Palette, skeinLengthMeters float
 
 			ensureNoteSet(notesByCode, normalized)
 			cleanPart := strings.TrimSpace(part)
-			if normalized != cleanPart {
+			if shouldShowNormalizationNote(cleanPart, normalized) {
 				notesByCode[normalized][fmt.Sprintf("%s -> %s", cleanPart, normalized)] = struct{}{}
-			}
-			if strings.Contains(rawCode, "+") {
-				notesByCode[normalized]["смесь: добавлена половина метража строки"] = struct{}{}
 			}
 		}
 	}
@@ -233,10 +231,10 @@ func buildResultFromMeters(metersByCode map[string]float64, notesByCode map[stri
 
 	for code, meters := range metersByCode {
 		lookupCode := paletteLookupCode(code, palette)
-		colorHex, found := palette[lookupCode]
+		color, found := palette[lookupCode]
 		notes := sortedNoteSet(notesByCode[code])
 		if !found {
-			colorHex = "#D1D5DB"
+			color = dmc.Color{Hex: "#D1D5DB"}
 			notes = append(notes, "цвет не найден в палитре")
 			result.Warnings = append(result.Warnings, fmt.Sprintf("Для кода %s не найден цвет палитры", code))
 		} else if lookupCode != code {
@@ -251,7 +249,8 @@ func buildResultFromMeters(metersByCode map[string]float64, notesByCode map[stri
 		result.TotalSkeins += skeins
 		result.Items = append(result.Items, ThreadResult{
 			Code:         code,
-			ColorHex:     colorHex,
+			ColorName:    color.Name,
+			ColorHex:     color.Hex,
 			PaletteFound: found,
 			Meters:       roundMeters(meters),
 			Skeins:       skeins,
@@ -304,6 +303,9 @@ func ensureNoteSet(notesByCode map[string]map[string]struct{}, code string) {
 
 func isRecalculatedNote(note string) bool {
 	return note == "цвет не найден в палитре" ||
+		note == "только в смесях" ||
+		note == "самостоятельная нить + смесь" ||
+		note == "смесь: добавлена половина метража строки" ||
 		strings.HasPrefix(note, "цвет взят из ") ||
 		strings.HasPrefix(note, "исправлено: ")
 }

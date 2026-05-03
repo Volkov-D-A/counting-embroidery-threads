@@ -16,6 +16,7 @@ export namespace threadcalc {
 	}
 	export class ThreadResult {
 	    code: string;
+	    colorName: string;
 	    colorHex: string;
 	    paletteFound: boolean;
 	    meters: number;
@@ -29,6 +30,7 @@ export namespace threadcalc {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.code = source["code"];
+	        this.colorName = source["colorName"];
 	        this.colorHex = source["colorHex"];
 	        this.paletteFound = source["paletteFound"];
 	        this.meters = source["meters"];

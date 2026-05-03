@@ -1,43 +1,38 @@
 package threadcalc
 
 import (
+	"counting-embroidery-threads/internal/dmc"
+
 	"regexp"
 	"strconv"
 	"strings"
 )
 
 var firstNumber = regexp.MustCompile(`\d+`)
+var letterPrefix = regexp.MustCompile(`^[A-Z]+`)
+
+var cyrillicToLatinCodeLetters = map[rune]rune{
+	'А': 'A', 'а': 'A',
+	'В': 'B', 'в': 'B',
+	'Е': 'E', 'е': 'E',
+	'Ё': 'E', 'ё': 'E',
+	'З': 'Z', 'з': 'Z',
+	'К': 'K', 'к': 'K',
+	'М': 'M', 'м': 'M',
+	'Н': 'H', 'н': 'H',
+	'О': 'O', 'о': 'O',
+	'Р': 'P', 'р': 'P',
+	'С': 'C', 'с': 'C',
+	'Т': 'T', 'т': 'T',
+	'У': 'Y', 'у': 'Y',
+	'Х': 'X', 'х': 'X',
+	'І': 'I', 'і': 'I',
+	'Ј': 'J', 'ј': 'J',
+	'Ѕ': 'S', 'ѕ': 'S',
+}
 
 func normalizeCode(code string) string {
-	code = strings.TrimSpace(code)
-	code = strings.ReplaceAll(code, " ", "")
-	code = strings.Map(func(r rune) rune {
-		switch r {
-		case 'А', 'а':
-			return 'A'
-		case 'В', 'в':
-			return 'B'
-		case 'Е', 'е':
-			return 'E'
-		case 'К', 'к':
-			return 'K'
-		case 'М', 'м':
-			return 'M'
-		case 'О', 'о':
-			return 'O'
-		case 'Р', 'р':
-			return 'P'
-		case 'С', 'с':
-			return 'C'
-		case 'Т', 'т':
-			return 'T'
-		case 'Х', 'х':
-			return 'X'
-		default:
-			return r
-		}
-	}, code)
-	code = strings.ToUpper(code)
+	code = baseNormalizeCode(code)
 	switch code {
 	case "5200":
 		return "B5200"
@@ -54,7 +49,23 @@ func normalizeCode(code string) string {
 	return code
 }
 
-func paletteLookupCode(code string, palette map[string]string) string {
+func shouldShowNormalizationNote(rawCode, normalizedCode string) bool {
+	return baseNormalizeCode(rawCode) != normalizedCode
+}
+
+func baseNormalizeCode(code string) string {
+	code = strings.TrimSpace(code)
+	code = strings.ReplaceAll(code, " ", "")
+	code = strings.Map(func(r rune) rune {
+		if latin, ok := cyrillicToLatinCodeLetters[r]; ok {
+			return latin
+		}
+		return r
+	}, code)
+	return strings.ToUpper(code)
+}
+
+func paletteLookupCode(code string, palette dmc.Palette) string {
 	if _, ok := palette[code]; ok {
 		return code
 	}
@@ -76,7 +87,14 @@ func paletteLookupCode(code string, palette map[string]string) string {
 		if _, ok := palette[lightEffectsCode]; ok {
 			return lightEffectsCode
 		}
-		return match
+		if _, ok := palette[match]; ok {
+			return match
+		}
+	}
+	if match != "" && letterPrefix.MatchString(code) {
+		if _, ok := palette[match]; ok {
+			return match
+		}
 	}
 	return code
 }

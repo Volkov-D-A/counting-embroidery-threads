@@ -12,8 +12,14 @@ import (
 //go:embed floss_adrianj.csv floss_2017.csv floss_light_effects.csv
 var paletteFS embed.FS
 
-// Palette maps DMC codes to display HEX colours.
-type Palette map[string]string
+// Color describes a display colour from the bundled DMC palette.
+type Color struct {
+	Hex  string
+	Name string
+}
+
+// Palette maps DMC codes to display colours.
+type Palette map[string]Color
 
 // LoadPalette loads the bundled open DMC palette.
 func LoadPalette() (Palette, error) {
@@ -23,11 +29,11 @@ func LoadPalette() (Palette, error) {
 			return nil, err
 		}
 	}
-	if hex, ok := palette["WHITE"]; ok {
-		palette["BLANC"] = hex
+	if color, ok := palette["WHITE"]; ok {
+		palette["BLANC"] = color
 	}
-	if hex, ok := palette["ECRU"]; ok {
-		palette["ECRUT"] = hex
+	if color, ok := palette["ECRU"]; ok {
+		palette["ECRUT"] = color
 	}
 
 	return palette, nil
@@ -52,7 +58,7 @@ func loadCSVPalette(palette Palette, filename string) error {
 		indexes[strings.TrimSpace(name)] = i
 	}
 
-	required := []string{"Floss#", "Red", "Green", "Blue", "RGB code"}
+	required := []string{"Floss#", "Description", "Red", "Green", "Blue", "RGB code"}
 	for _, name := range required {
 		if _, ok := indexes[name]; !ok {
 			return fmt.Errorf("%s: palette column %q not found", filename, name)
@@ -81,7 +87,10 @@ func loadCSVPalette(palette Palette, filename string) error {
 			hex = fmt.Sprintf("%02X%02X%02X", red, green, blue)
 		}
 
-		palette[code] = "#" + hex
+		palette[code] = Color{
+			Hex:  "#" + hex,
+			Name: strings.TrimSpace(record[indexes["Description"]]),
+		}
 	}
 
 	return nil

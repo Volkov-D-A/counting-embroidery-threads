@@ -81,6 +81,9 @@ func TestImportUsesTotalMetersAndMergesDuplicates(t *testing.T) {
 	if white.ColorHex != "#FFFFFF" {
 		t.Fatalf("B5200 color = %s, want #FFFFFF", white.ColorHex)
 	}
+	if white.ColorName != "Snow White" {
+		t.Fatalf("B5200 color name = %q, want Snow White", white.ColorName)
+	}
 }
 
 func TestRecalculateWithCodeCorrectionsMergesTargetCode(t *testing.T) {
@@ -132,7 +135,7 @@ func TestRecalculateWithCodeCorrectionsNormalizesTargetCode(t *testing.T) {
 	}
 
 	recalculated, err := RecalculateWithCorrections(source, []CodeCorrection{
-		{From: "BAD", To: "е321(k29)"},
+		{From: "BAD", To: "е321(к29)"},
 	}, DefaultSkeinLengthMeters)
 	if err != nil {
 		t.Fatal(err)
@@ -150,7 +153,7 @@ func TestRecalculateWithCodeCorrectionsNormalizesTargetCode(t *testing.T) {
 	}
 }
 
-func TestCyrillicENormalizedAndPaletteUsesSpecialtyThenBaseDMC(t *testing.T) {
+func TestCyrillicLettersNormalizedAndPaletteUsesSpecialtyThenBaseDMC(t *testing.T) {
 	result, err := ImportFile(filepath.Join("..", "..", "examle", "Целитель для разбора.TXT"), DefaultSkeinLengthMeters)
 	if err != nil {
 		t.Fatal(err)
@@ -184,13 +187,58 @@ func TestCyrillicENormalizedAndPaletteUsesSpecialtyThenBaseDMC(t *testing.T) {
 	if !containsNote(regularFallback.Notes, "цвет взят из 797") {
 		t.Fatalf("expected fallback note for E797(K34), got %v", regularFallback.Notes)
 	}
+	if regularFallback.ColorName != "Royal Blue" {
+		t.Fatalf("E797(K34) fallback color name = %q, want Royal Blue", regularFallback.ColorName)
+	}
+}
+
+func TestCyrillicCodeLettersNormalizeToLatin(t *testing.T) {
+	tests := map[string]string{
+		"е321(к29)": "E321(K29)",
+		"с797":      "C797",
+		"н01":       "H01",
+		"у02":       "Y02",
+		"з03":       "Z03",
+	}
+
+	for raw, want := range tests {
+		if got := normalizeCode(raw); got != want {
+			t.Fatalf("normalizeCode(%q) = %q, want %q", raw, got, want)
+		}
+	}
+}
+
+func TestUnreadableNormalizationNotesAreHidden(t *testing.T) {
+	palette := dmc.Palette{
+		"E321":  {Hex: "#BD1136", Name: "Red Ruby"},
+		"B5200": {Hex: "#FFFFFF", Name: "Snow White"},
+		"ECRU":  {Hex: "#F0EADA", Name: "Ecru"},
+	}
+	report := "Thread lengths\nThread (DMC)\tDescription\tStitches\tBackstitches\tLength(m)\tBacks\tTotal\nе321(к29)\tRed Ruby\t1\t0\t1.0\t0.0\t1.0\n5200\tSnow White\t1\t0\t1.0\t0.0\t1.0\nECRUT\tEcru\t1\t0\t1.0\t0.0\t1.0\n"
+
+	result := parseAndCalculate(report, palette, DefaultSkeinLengthMeters)
+
+	lightEffect := requireItem(t, result, "E321(K29)")
+	if containsNote(lightEffect.Notes, "е321(к29) -> E321(K29)") {
+		t.Fatalf("unreadable cyrillic-to-latin note should be hidden, got %v", lightEffect.Notes)
+	}
+
+	white := requireItem(t, result, "B5200")
+	if !containsNote(white.Notes, "5200 -> B5200") {
+		t.Fatalf("readable 5200 normalization note not found: %v", white.Notes)
+	}
+
+	ecru := requireItem(t, result, "ECRU")
+	if !containsNote(ecru.Notes, "ECRUT -> ECRU") {
+		t.Fatalf("readable ECRUT normalization note not found: %v", ecru.Notes)
+	}
 }
 
 func TestBlendsWithThreeOrMorePartsStillUseHalfTotal(t *testing.T) {
 	palette := dmc.Palette{
-		"111": "#111111",
-		"222": "#222222",
-		"333": "#333333",
+		"111": {Hex: "#111111", Name: "One"},
+		"222": {Hex: "#222222", Name: "Two"},
+		"333": {Hex: "#333333", Name: "Three"},
 	}
 	report := "Thread lengths\nThread (DMC)\tDescription\tStitches\tBackstitches\tLength(m)\tBacks\tTotal\n111+222+333\t+\t1\t0\t10.0\t0.0\t10.0\n"
 
@@ -201,12 +249,15 @@ func TestBlendsWithThreeOrMorePartsStillUseHalfTotal(t *testing.T) {
 		if item.Meters != 5 {
 			t.Fatalf("%s meters = %.2f, want 5.00", code, item.Meters)
 		}
+		if len(item.Notes) != 0 {
+			t.Fatalf("%s notes = %v, want no blend status notes", code, item.Notes)
+		}
 	}
 }
 
 func TestSingleDigitNewDMCCodeIsZeroPadded(t *testing.T) {
 	palette := dmc.Palette{
-		"01": "#E3E3E6",
+		"01": {Hex: "#E3E3E6", Name: "White Tin"},
 	}
 	report := "Thread lengths\nThread (DMC)\tDescription\tStitches\tBackstitches\tLength(m)\tBacks\tTotal\n1\tWhite Tin\t1\t0\t1.0\t0.0\t1.0\n"
 
@@ -214,6 +265,24 @@ func TestSingleDigitNewDMCCodeIsZeroPadded(t *testing.T) {
 	item := requireItem(t, result, "01")
 	if item.ColorHex != "#E3E3E6" {
 		t.Fatalf("01 color = %s, want #E3E3E6", item.ColorHex)
+	}
+}
+
+func TestUnknownLetterPrefixFallsBackToBaseDMC(t *testing.T) {
+	palette := dmc.Palette{
+		"797": {Hex: "#13477D", Name: "Royal Blue"},
+	}
+	report := "Thread lengths\nThread (DMC)\tDescription\tStitches\tBackstitches\tLength(m)\tBacks\tTotal\nC797\tRoyal blue\t1\t0\t1.0\t0.0\t1.0\nS797\tRoyal blue\t1\t0\t1.0\t0.0\t1.0\nD797\tRoyal blue\t1\t0\t1.0\t0.0\t1.0\n"
+
+	result := parseAndCalculate(report, palette, DefaultSkeinLengthMeters)
+	for _, code := range []string{"C797", "S797", "D797"} {
+		item := requireItem(t, result, code)
+		if item.ColorHex != "#13477D" {
+			t.Fatalf("%s color = %s, want #13477D", code, item.ColorHex)
+		}
+		if !containsNote(item.Notes, "цвет взят из 797") {
+			t.Fatalf("expected fallback note for %s, got %v", code, item.Notes)
+		}
 	}
 }
 

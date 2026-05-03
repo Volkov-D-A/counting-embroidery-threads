@@ -24,6 +24,7 @@ type CodeCorrection struct {
 // ThreadResult is one aggregated DMC row in the final calculation.
 type ThreadResult struct {
 	Code         string   `json:"code"`
+	ColorName    string   `json:"colorName"`
 	ColorHex     string   `json:"colorHex"`
 	PaletteFound bool     `json:"paletteFound"`
 	Meters       float64  `json:"meters"`
